@@ -1,0 +1,5 @@
+Find the avg salary
+scala> val rdd = sc.parallelize(Array(("A",1000),("A",1500),("A",1300),("B",3000),("B",3400)))
+
+scala> rdd.mapValues(x=>(x,1)).reduceByKey((x,y)=>(x._1+y._1,x._2+y._2)).mapValues(x=>(x._1/x._2)).collect()
+res3: Array[(String, Int)] = Array((B,3200), (A,1266))  
