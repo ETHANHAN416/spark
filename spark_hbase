@@ -1,0 +1,39 @@
+# 厦门大学 Spark编程基础（Scala）使用spark读取hbase数据
+
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hbase._
+import org.apache.hadoop.hbase.client._
+import org.apache.hadoop.hbase.mapreduce.TableInputFormat
+import org.apache.hadoop.hbase.util.Bytes
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.SparkConf
+import org.apache.log4j.{Level, Logger}
+
+object SparkOperateHBase {
+def main(args: Array[String]) {
+Logger.getLogger("org.apache.spark").setLevel(Level.ERROR)
+Logger.getLogger("org.apache.hadoop").setLevel(Level.ERROR)
+Logger.getLogger("org.apache.zookeeper").setLevel(Level.WARN)
+Logger.getLogger("org.apache.hive").setLevel(Level.WARN)
+    val hconf = HBaseConfiguration.create()
+val sc = new SparkContext(new SparkConf())
+val tablename = "student"
+    hconf.set(TableInputFormat.INPUT_TABLE, tablename)
+    val hRDD = sc.newAPIHadoopRDD(hconf, classOf[TableInputFormat],
+ 	 classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
+ 	 classOf[org.apache.hadoop.hbase.client.Result])
+    val ct = hRDD.count()
+    println("Students RDD Count:" + ct)
+    hRDD.cache()
+
+    hRDD.foreach({ case (_,result) =>
+        val key = Bytes.toString(result.getRow)
+        val name = Bytes.toString(result.getValue("info".getBytes,"name".getBytes))
+        val gender = Bytes.toString(result.getValue("info".getBytes,"gender".getBytes))
+        val age = Bytes.toString(result.getValue("info".getBytes,"age".getBytes))
+        println("Row key:"+key+" Name:"+name+" Gender:"+gender+" Age:"+age)
+    })
+}
+}
+
