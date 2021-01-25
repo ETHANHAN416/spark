@@ -1,0 +1,39 @@
+scala> import org.apache.spark.sql.types._
+import org.apache.spark.sql.types._
+
+scala> import org.apache.spark.sql.Row
+import org.apache.spark.sql.Row
+
+scala> val fields = Array(StructField("name",StringType,true),StructField("language",StringType,true),StructField("age",IntegerType,true))
+fields: Array[org.apache.spark.sql.types.StructField] = Array(StructField(name,StringType,true), StructField(language,StringType,true), StructField(age,IntegerType,true))
+
+scala> val schema = StructType(fields)
+schema: org.apache.spark.sql.types.StructType = StructType(StructField(name,StringType,true), StructField(language,StringType,true), StructField(age,IntegerType,true))
+
+scala> val rdd= spark.sparkContext.textFile("file:///home/hadoop/下载/data1.txt")
+rdd: org.apache.spark.rdd.RDD[String] = file:///home/hadhoop/下载/data1.txt MapPartitionsRDD[5] at textFile at <console>:38
+
+scala> val newrdd = rdd.map(_.split(",")).map(arr=>Row(arr(0),arr(1),arr(2).toInt))
+newrdd: org.apache.spark.rdd.RDD[org.apache.spark.sql.Row] = MapPartitionsRDD[3] at map at <console>:29
+
+scala> val df = spark.createDataFrame(newrdd,schema)
+df: org.apache.spark.sql.DataFrame = [name: string, language: string ... 1 more field]
+
+scala> df.createOrReplaceTempView("table1")
+
+scala> val res=spark.sql("select language, avg(age)from table1 group by language")
+res: org.apache.spark.sql.DataFrame = [language: string, avg(age): double]
+
+scala> res.show()
++---------------+------------------+                                            
+|       language|          avg(age)|
++---------------+------------------+
+|ComputerNetwork|51.901408450704224|
+|      CLanguage|         50.609375|
+|  DataStructure| 47.57251908396947|
+|       DataBase| 50.53968253968254|
+|      Algorithm|48.833333333333336|
+|OperatingSystem|54.940298507462686|
+|       Software| 50.90909090909091|
+|         Python|  57.8235294117647|
++---------------+------------------+
