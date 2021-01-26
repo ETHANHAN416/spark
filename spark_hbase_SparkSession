@@ -1,0 +1,41 @@
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hbase._
+import org.apache.hadoop.hbase.client._
+import org.apache.hadoop.hbase.mapreduce.TableInputFormat
+import org.apache.hadoop.hbase.util.Bytes
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+import org.apache.log4j.{Level, Logger}
+
+object SparkOperateHBase {
+def main(args: Array[String]) {
+    Logger.getLogger("org.apache.spark").setLevel(Level.ERROR)
+    Logger.getLogger("org.apache.hadoop").setLevel(Level.ERROR)
+    Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR)
+    Logger.getLogger("org.apache.hive").setLevel(Level.WARN)
+
+    val hconf = HBaseConfiguration.create()
+    val spark = SparkSession.builder().appName("SparkApplication1").master("local[*]").getOrCreate()
+    val sc = spark.sparkContext
+    val tablename = "student"
+    hconf.set("hbase.zookeeper.quorum","localhost")
+    hconf.set("hbase.zookeeper.property.clientPort", "2181")
+    hconf.set(TableInputFormat.INPUT_TABLE, tablename)
+
+    val rdd1 = sc.newAPIHadoopRDD(hconf, classOf[TableInputFormat],
+  classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
+  classOf[org.apache.hadoop.hbase.client.Result])
+    val ct = rdd1.count()
+    println("Students RDD Count:" + ct)
+    rdd1.cache()
+
+
+    rdd1.foreach({ case (_,result) =>
+        val key = Bytes.toString(result.getRow)
+        val name = Bytes.toString(result.getValue("info".getBytes,"name".getBytes))
+        val gender = Bytes.toString(result.getValue("info".getBytes,"gender".getBytes))
+        val age = Bytes.toString(result.getValue("info".getBytes,"age".getBytes))
+        println("Row key:"+key+" Name:"+name+" Gender:"+gender+" Age:"+age)
+    })
