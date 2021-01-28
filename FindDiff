@@ -1,0 +1,28 @@
+# Find the difference between the max unix_timestamp and the second unix_timestamp of each page
+import org.apache.spark.sql.SparkSession
+object FindDiff {
+  case class page_info(user_id: String, page:String, unix_timestamp:Int)
+  def main(args: Array[String]): Unit = {
+    val path = "file:///usr/local/spark/mycode/FindDiff/query_one.csv"
+    val spark = SparkSession.builder().appName("FindDiff").master("local[*]").getOrCreate()
+    val sc = spark.sparkContext
+    import spark.implicits._
+    val file = sc.textFile(path)
+    val header = file.first()
+    val df = file.filter(_!=header).map(_.split(",")).map(x=> page_info(x(0),x(1).replaceAll("\""," ") ,x(2).toInt)).toDF()
+    df.createOrReplaceTempView("query_one")
+    val res=spark.sql("SELECT T2.page, fir - sec as diff\nFROM( \n\tSELECT page, UNIX_TIMESTAMP as sec \n\tFrom \n\t (\n\t\tSELECT page, UNIX_TIMESTAMP, rank()over(partition by page order by UNIX_TIMESTAMP desc) as rk \n\t\tFrom query_one\n\t)AAA\n\twhere rk=2\n) T1\nRIGHT JOIN \n(\n\tSELECT page, UNIX_TIMESTAMP as fir \n\tFrom \n\t (\n\t\tSELECT page, UNIX_TIMESTAMP, rank()over(partition by page order by UNIX_TIMESTAMP desc) as rk \n\t\tFrom query_one\n\t)AAA\n\twhere rk=1\n) T2 USING (page)\nORDER BY T2.page")
+    res.show()
+  }
+}
+
++--------------------+----+
+|                page|diff|
++--------------------+----+
+|          home_page |   6|
+| payment_confirma...|1226|
+|       payment_page |  74|
+|       product_page |  62|
+|             search |  36|
+|                  NA|1105|
++--------------------+----+
