@@ -1,0 +1,12 @@
+import org.apache.spark.sql.SparkSession
+
+object WordCount {
+  def main(args: Array[String]) {
+    val inputFile =  "file:///usr/local/spark/mycode/wordcount/word.txt" /** import data */
+    val spark = SparkSession.builder().appName("WordCount").master("local[*]").getOrCreate() /** Using SparkSession to set name and master */
+    val sc = spark.sparkContext
+    val textFile = sc.textFile(inputFile)
+    val wordCount = textFile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey((a, b) => a + b) /** split lines by space and get words, then use map and reduce to get the total counts of each words */
+    wordCount.foreach(println) /** print the result */
+  }
+}
